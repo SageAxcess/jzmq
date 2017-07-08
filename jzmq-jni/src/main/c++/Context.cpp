@@ -72,23 +72,29 @@ Java_org_zeromq_ZMQ_00024Context_destroy (JNIEnv *env, jobject obj) {
     }
 }
 
-//TODO: put into context - either java or c++
-jobject g_errorIface;
-jmethodID g_errorMethod;
-JNIEnv *g_env;
+struct ctx_data
+{
+	JNIEnv* env;
+	jobject obj;
+	jmethodID method;
+};
 
 jobject errorByCode(JNIEnv* env, int err)
 {
-	jclass enumClass = g_env->FindClass("org.zeromq.ZMQ$Error");
-	jmethodID enumMethod = g_env->GetStaticMethodID(enumClass, "findByCode", "(I)Lorg/zeromq/ZMQ$Error;");
-	return g_env->CallStaticObjectMethod(enumClass, enumMethod, err);
+	jclass enumClass = env->FindClass("org.zeromq.ZMQ$Error");
+	jmethodID enumMethod = env->GetStaticMethodID(enumClass, "findByCode", "(I)Lorg/zeromq/ZMQ$Error;");
+	return env->CallStaticObjectMethod(enumClass, enumMethod, err);
 }
 
-//TODO: pass context
 void zmq_error_cb(int err, const char* host, void* data)
 {
-	jstring str = g_env->NewStringUTF(host);
-	g_env->CallVoidMethod(g_errorIface, g_errorMethod, errorByCode(g_env, err), str);
+	ctx_data* ctx = static_cast<ctx_data*>(data);
+	if(!ctx) {
+		return;
+	}
+
+	jstring str = ctx->env->NewStringUTF(host);
+	ctx->env->CallVoidMethod(ctx->obj, ctx->method, errorByCode(ctx->env, err), str);
 }
 
 JNIEXPORT jboolean JNICALL Java_org_zeromq_ZMQ_00024Context_setErrorHandler
@@ -103,7 +109,7 @@ JNIEXPORT jboolean JNICALL Java_org_zeromq_ZMQ_00024Context_setErrorHandler
 
 	if(error==NULL)
 	{
-		result = zmq_error_handler(c, NULL);
+		result = zmq_error_handler(c, NULL, NULL);
 	}
 	else {
 		jclass objclass = env->GetObjectClass(error);
@@ -113,12 +119,17 @@ JNIEXPORT jboolean JNICALL Java_org_zeromq_ZMQ_00024Context_setErrorHandler
 			return JNI_FALSE;
 		}
 
-		//TODO: store in context
-		g_errorMethod = method;
-		g_errorIface = error;
-		g_env = env;
+		ctx_data* data = static_cast<ctx_data*>(malloc(sizeof(ctx_data)));
+		if(!data)
+		{
+			return JNI_FALSE;
+		}
 
-		result = zmq_error_handler(c, zmq_error_cb);
+		data->method = method;
+		data->obj = error;
+		data->env = env;
+
+		result = zmq_error_handler(c, zmq_error_cb, data);
 	}
 	return result == 0;
 #else
