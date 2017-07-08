@@ -72,6 +72,60 @@ Java_org_zeromq_ZMQ_00024Context_destroy (JNIEnv *env, jobject obj) {
     }
 }
 
+//TODO: put into context - either java or c++
+jobject g_errorIface;
+jmethodID g_errorMethod;
+JNIEnv *g_env;
+
+jobject errorByCode(JNIEnv* env, int err)
+{
+	jclass enumClass = g_env->FindClass("org.zeromq.ZMQ$Error");
+	jmethodID enumMethod = g_env->GetStaticMethodID(enumClass, "findByCode", "(I)Lorg/zeromq/ZMQ$Error;");
+	return g_env->CallStaticObjectMethod(enumClass, enumMethod, err);
+}
+
+//TODO: pass context
+void zmq_error_cb(int err, const char* host, void* data)
+{
+	jstring str = g_env->NewStringUTF(host);
+	g_env->CallVoidMethod(g_errorIface, g_errorMethod, errorByCode(g_env, err), str);
+}
+
+JNIEXPORT jboolean JNICALL Java_org_zeromq_ZMQ_00024Context_setErrorHandler
+(JNIEnv *env, jobject obj, jobject error)
+{
+#if ZMQ_VERSION >= ZMQ_MAKE_VERSION(4,2,3)
+	void *c = get_context(env, obj);
+	if (!c)
+		return JNI_FALSE;
+
+	int result = 0;
+
+	if(error==NULL)
+	{
+		result = zmq_error_handler(c, NULL);
+	}
+	else {
+		jclass objclass = env->GetObjectClass(error);
+		jmethodID method = env->GetMethodID(objclass, "reportError", "(Lorg/zeromq/ZMQ$Error;Ljava/lang/String;)I");
+		if(method==NULL)
+		{
+			return JNI_FALSE;
+		}
+
+		//TODO: store in context
+		g_errorMethod = method;
+		g_errorIface = error;
+		g_env = env;
+
+		result = zmq_error_handler(c, zmq_error_cb);
+	}
+	return result == 0;
+#else
+	return JNI_FALSE;
+#endif
+}
+
 JNIEXPORT jboolean JNICALL
 Java_org_zeromq_ZMQ_00024Context_setMaxSockets (JNIEnv * env, jobject obj, jint maxSockets)
 {

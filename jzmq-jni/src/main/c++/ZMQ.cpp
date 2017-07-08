@@ -18,6 +18,7 @@
 */
 
 #include <zmq.h>
+#include <jni_md.h>
 
 #include "jzmq.hpp"
 #include "org_zeromq_ZMQ.h"
@@ -148,6 +149,30 @@ JNIEXPORT jlong JNICALL
 Java_org_zeromq_ZMQ_EAGAIN (JNIEnv *env, jclass cls)
 {
     return EAGAIN;
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_zeromq_ZMQ_ECURVEKEY(JNIEnv *env, jclass cls)
+{
+    return ECURVEKEY;
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_zeromq_ZMQ_ECURVEHANDSHAKE(JNIEnv *env, jclass cls)
+{
+    return ECURVEHANDSHAKE;
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_zeromq_ZMQ_ECURVECLIENT(JNIEnv *env, jclass cls)
+{
+    return ECURVECLIENT;
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_zeromq_ZMQ_ECURVENONCE(JNIEnv *env, jclass cls)
+{
+    return ECURVENONCE;
 }
 
 JNIEXPORT void JNICALL

@@ -367,6 +367,20 @@ public class ZMQ {
 
     protected static native long EAGAIN();
 
+    protected static native long ECURVEKEY();
+
+    protected static native long ECURVEHANDSHAKE();
+
+    protected static native long ECURVECLIENT();
+
+    protected static native long ECURVENONCE();
+
+    protected static native long ECURVEHELLOVER();
+
+    protected static native long ECURVEHELLOSIZE();
+
+    protected static native long ECURVEHELLOCMD();
+
     private static native void run_proxy(Socket frontend, Socket backend, Socket capture);
 
     /**
@@ -402,7 +416,22 @@ public class ZMQ {
 
         ENOTSOCK(ENOTSOCK()),
 
-        EAGAIN(EAGAIN());
+        EAGAIN(EAGAIN()),
+
+		ECURVEKEY(ECURVEKEY()),
+
+		ECURVEHANDSHAKE(ECURVEHANDSHAKE()),
+
+		ECURVECLIENT(ECURVECLIENT()),
+
+		ECURVENONCE(ECURVENONCE()),
+
+		ECURVEHELLOVER(ECURVEHELLOVER()),
+
+		ECURVEHELLOSIZE(ECURVEHELLOSIZE()),
+
+		ECURVEHELLOCMD(ECURVEHELLOCMD());
+
 
         private final long code;
 
@@ -433,6 +462,10 @@ public class ZMQ {
     public static Context context(int ioThreads) {
         return new Context(ioThreads);
     }
+
+	public interface ContextErrorHandler {
+		int reportError(Error error, String host);
+	}
 
     /**
      * Inner class: Context.
@@ -495,6 +528,9 @@ public class ZMQ {
 
         /** Free all resources used by JNI interface. */
         protected native void destroy();
+
+		/** Set error handler */
+		public native boolean setErrorHandler(ContextErrorHandler handler);
 
         /**
          * Get the underlying context handle. This is private because it is only accessed from JNI, where Java access

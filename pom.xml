@@ -8,7 +8,7 @@
   </parent>
   <groupId>org.zeromq</groupId>
   <artifactId>jzmq-parent</artifactId>
-  <version>3.1.1-SNAPSHOT</version>
+  <version>4.2.3-CALLBACK</version>
   <packaging>pom</packaging>
   <description>
     The 0MQ lightweight messaging kernel is a library which extends
