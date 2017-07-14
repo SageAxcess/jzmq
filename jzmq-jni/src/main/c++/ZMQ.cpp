@@ -175,6 +175,24 @@ Java_org_zeromq_ZMQ_ECURVENONCE(JNIEnv *env, jclass cls)
     return ECURVENONCE;
 }
 
+JNIEXPORT jlong JNICALL
+Java_org_zeromq_ZMQ_ECURVEHELLOVER(JNIEnv *env, jclass cls)
+{
+    return ECURVEHELLOVER;
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_zeromq_ZMQ_ECURVEHELLOSIZE(JNIEnv *env, jclass cls)
+{
+    return ECURVEHELLOSIZE;
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_zeromq_ZMQ_ECURVEHELLOCMD(JNIEnv *env, jclass cls)
+{
+    return ECURVEHELLOCMD;
+}
+
 JNIEXPORT void JNICALL
 Java_org_zeromq_ZMQ_run_1proxy (JNIEnv *env, jclass cls, jobject frontend_, jobject backend_, jobject capture_)
 {
