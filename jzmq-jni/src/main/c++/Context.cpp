@@ -20,6 +20,7 @@
 #include <assert.h>
 
 #include <zmq.h>
+#include <jni_md.h>
 
 #include "jzmq.hpp"
 #include "util.hpp"
@@ -70,6 +71,110 @@ Java_org_zeromq_ZMQ_00024Context_destroy (JNIEnv *env, jobject obj) {
         raise_exception (env, err);
         return;
     }
+}
+
+struct ctx_data
+{
+	JavaVM* vm;
+	jobject obj;
+	jmethodID method;
+
+	jclass errClass;
+	jmethodID errMethod;
+};
+
+jobject errorByCode(JNIEnv* env, jclass errClass, jmethodID errMethod, int err)
+{
+	if(env==NULL || errClass==NULL || errMethod==NULL)
+		return NULL;
+
+	return env->CallStaticObjectMethod(errClass, errMethod, err);
+}
+
+void zmq_error_cb(int err, const char* host, void* data)
+{
+	ctx_data* ctx = static_cast<ctx_data*>(data);
+	if(!ctx) {
+		return;
+	}
+
+	JNIEnv* env;
+	int getEnvStat = ctx->vm->GetEnv((void **)&env, JNI_VERSION_1_8);
+
+	if (getEnvStat == JNI_EDETACHED) {		
+		if (ctx->vm->AttachCurrentThread((void **)&env, NULL) != 0) {
+			printf("JNI Error: Failed to attach to current thread!\n");
+			return;
+		}
+	}
+	else if (getEnvStat == JNI_OK) {
+		//
+	}
+	else if (getEnvStat == JNI_EVERSION) {
+		printf("JNI Error: Unsupported JVM version!\n");
+		return;
+	}
+
+	jstring str = env->NewStringUTF(host);
+	env->CallVoidMethod(ctx->obj, ctx->method, errorByCode(env, ctx->errClass, ctx->errMethod, err), str);
+	ctx->vm->DetachCurrentThread();
+}
+
+JNIEXPORT jboolean JNICALL Java_org_zeromq_ZMQ_00024Context_setErrorHandler
+(JNIEnv *env, jobject obj, jobject error)
+{
+#if ZMQ_VERSION >= ZMQ_MAKE_VERSION(4,2,3)
+	void *c = get_context(env, obj);
+	if (!c)
+		return JNI_FALSE;
+	
+	int result = 0;
+
+	if(error==NULL)
+	{
+		result = zmq_error_handler(c, NULL, NULL);
+	}
+	else {
+		//env->NewGlobalRef(error);
+		jstring str = env->NewStringUTF("test string");		
+
+		jclass objclass = env->GetObjectClass(error);
+		jmethodID method = env->GetMethodID(objclass, "reportError", "(Lorg/zeromq/ZMQ$Error;Ljava/lang/String;)I");
+		if(method==NULL)
+		{
+			return JNI_FALSE;
+		}
+
+		ctx_data* data = static_cast<ctx_data*>(malloc(sizeof(ctx_data)));
+		if(!data)
+		{
+			return JNI_FALSE;
+		}
+
+		data->method = method;
+		data->obj = env->NewGlobalRef(error);
+		data->vm = NULL;
+		env->GetJavaVM(&data->vm);
+
+		data->errClass = env->FindClass("org/zeromq/ZMQ$Error");
+		if (!data->errClass)
+		{
+			printf("JNI Error: org/zeromq/ZMQ$Error class not found!\n");
+		}
+		else {
+			data->errMethod = env->GetStaticMethodID(data->errClass, "findByCode", "(I)Lorg/zeromq/ZMQ$Error;");
+			if (!data->errMethod)
+			{
+				printf("JNI Error: org/zeromq/ZMQ$Error.findByCode(int) method not found!\n");
+			}
+		}
+
+		result = zmq_error_handler(c, zmq_error_cb, data);
+	}
+	return result == 0;
+#else
+	return JNI_FALSE;
+#endif
 }
 
 JNIEXPORT jboolean JNICALL
