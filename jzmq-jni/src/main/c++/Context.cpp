@@ -18,6 +18,7 @@
 */
 
 #include <assert.h>
+#include <stdlib.h>
 
 #include <zmq.h>
 #include <jni_md.h>
